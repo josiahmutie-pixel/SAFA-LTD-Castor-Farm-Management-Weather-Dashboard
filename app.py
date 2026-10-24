@@ -1,4 +1,3 @@
-%%writefile app.py
 import os
 import glob
 import streamlit as st
@@ -53,9 +52,11 @@ def sanitize_gdf(df):
 
 @st.cache_data
 def load_data():
-    # Direct relative paths to search for committed repository dataset
+    # Direct search paths including exact repo file name
     possible_paths = [
+        "farms_polygons_All.gpkg",
         "farm_boundaries.gpkg",
+        "data/farms_polygons_All.gpkg",
         "data/farm_boundaries.gpkg",
     ]
     
@@ -66,7 +67,6 @@ def load_data():
             break
             
     if file_path is None:
-        # Fallback recursive search across repo folders
         gpkg_files = glob.glob("*.gpkg") + glob.glob("**/*.gpkg", recursive=True)
         if gpkg_files:
             file_path = gpkg_files[0]
@@ -74,7 +74,11 @@ def load_data():
     if file_path is None:
         return None
 
-    gdf = gpd.read_file(file_path, layer="farm_boundaries")
+    try:
+        gdf = gpd.read_file(file_path, layer="farm_boundaries")
+    except Exception:
+        gdf = gpd.read_file(file_path)
+
     if gdf.crs is None or gdf.crs.to_epsg() != 4326:
         gdf = gdf.to_crs(epsg=4326)
     return sanitize_gdf(gdf)
@@ -98,7 +102,7 @@ def fetch_weather_forecast(lat, lon):
 gdf = load_data()
 
 if gdf is None:
-    st.error("Dataset not found in repository. Please ensure 'farm_boundaries.gpkg' is committed to your GitHub repo.")
+    st.error("Dataset not found in repository. Please ensure '.gpkg' file is committed to your GitHub repo.")
     st.stop()
 
 # --- APP HEADER ---
